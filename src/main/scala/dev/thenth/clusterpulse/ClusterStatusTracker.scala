@@ -108,7 +108,7 @@ object ClusterStatusTracker {
             sharding.shardState
               .ask[CurrentShardRegionState](
                 GetShardRegionState(typeKey, _)
-              )(timeout, context.system.scheduler)
+              )(using timeout, context.system.scheduler)
               .map(s => typeKey.name -> s)
           })
 
@@ -186,13 +186,13 @@ object ClusterStatusTracker {
     }
 
     val trackersFuture: Future[Receptionist.Listing] = context.system.receptionist
-      .ask(Receptionist.Find(ClusterStatusTrackerKey))(timeout, context.system.scheduler)
+      .ask(Receptionist.Find(ClusterStatusTrackerKey))(using timeout, context.system.scheduler)
 
     val resultFuture = for {
       listing <- trackersFuture
       trackers = listing.serviceInstances(ClusterStatusTrackerKey)
       responses <- Future.sequence(trackers.map { tracker =>
-        tracker.ask[LocalStateResponse](GetLocalState(_))(timeout, context.system.scheduler)
+        tracker.ask[LocalStateResponse](GetLocalState(_))(using timeout, context.system.scheduler)
       })
     } yield responses.toList
 

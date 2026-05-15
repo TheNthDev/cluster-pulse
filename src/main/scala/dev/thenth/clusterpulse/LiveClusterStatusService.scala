@@ -35,7 +35,7 @@ class LiveClusterStatusService(
       .ask[Response](GetStatus.apply)
       .collect { case ClusterStatusResponse(status) =>
         status
-      }(system.executionContext)
+      }(using system.executionContext)
 
   override def statusStream(): Source[ClusterStatus, ?] =
     Source
