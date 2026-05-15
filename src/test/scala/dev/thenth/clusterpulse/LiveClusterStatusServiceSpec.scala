@@ -12,8 +12,9 @@ import dev.thenth.clusterpulse.ClusterStatusTracker.*
 import dev.thenth.clusterpulse.model.{ClusterStatus, NodeInfo, ShardInfo}
 
 object LiveClusterStatusServiceSpec {
-  val config = ConfigFactory.parseString(
-    """
+  val config = ConfigFactory
+    .parseString(
+      """
       |cluster-pulse {
       |  report-interval = 1s
       |  ask-timeout = 3s
@@ -22,14 +23,15 @@ object LiveClusterStatusServiceSpec {
       |  split-brain-membership-threshold = 0.5
       |}
       |""".stripMargin
-  ).withFallback(ConfigFactory.load())
+    )
+    .withFallback(ConfigFactory.load())
 }
 
 class LiveClusterStatusServiceSpec
-  extends ScalaTestWithActorTestKit(LiveClusterStatusServiceSpec.config)
-  with AnyWordSpecLike
-  with Matchers
-  with ScalaFutures {
+    extends ScalaTestWithActorTestKit(LiveClusterStatusServiceSpec.config)
+    with AnyWordSpecLike
+    with Matchers
+    with ScalaFutures {
 
   implicit override val patienceConfig: PatienceConfig =
     PatienceConfig(timeout = Span(5, Seconds), interval = Span(100, Millis))
@@ -39,7 +41,8 @@ class LiveClusterStatusServiceSpec
     "return cluster status via getStatus" in {
       val expectedStatus = ClusterStatus(
         List(NodeInfo("pekko://test@127.0.0.1:2551", "Up", Set("core"), List(ShardInfo("s1", 2, List("e1", "e2"))))),
-        2, List("e1", "e2")
+        2,
+        List("e1", "e2")
       )
 
       val fakeTracker = spawn(Behaviors.receiveMessage[Command] {
@@ -50,7 +53,7 @@ class LiveClusterStatusServiceSpec
       })
 
       val service = new LiveClusterStatusService(fakeTracker)
-      val result = service.getStatus.futureValue
+      val result  = service.getStatus.futureValue
       result shouldBe expectedStatus
     }
 
@@ -65,7 +68,7 @@ class LiveClusterStatusServiceSpec
       })
 
       val service = new LiveClusterStatusService(fakeTracker)
-      val result = service.getStatus.futureValue
+      val result  = service.getStatus.futureValue
       result shouldBe emptyStatus
       result.nodes shouldBe empty
       result.totalEntityCount shouldBe 0
@@ -74,7 +77,8 @@ class LiveClusterStatusServiceSpec
     "produce a status stream" in {
       val status = ClusterStatus(
         List(NodeInfo("pekko://test@127.0.0.1:2551", "Up", Set.empty, Nil)),
-        0, Nil
+        0,
+        Nil
       )
 
       val fakeTracker = spawn(Behaviors.receiveMessage[Command] {
@@ -85,7 +89,7 @@ class LiveClusterStatusServiceSpec
       })
 
       val service = new LiveClusterStatusService(fakeTracker)
-      val stream = service.statusStream()
+      val stream  = service.statusStream()
 
       import org.apache.pekko.stream.scaladsl.Sink
       val results = stream.take(2).runWith(Sink.seq).futureValue

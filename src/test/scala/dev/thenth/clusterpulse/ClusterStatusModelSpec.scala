@@ -76,11 +76,15 @@ class ClusterStatusModelSpec extends AnyWordSpec with Matchers {
       status.unreachableCount shouldBe 0
     }
     "count unreachable nodes" in {
-      val status = ClusterStatus(List(
-        NodeInfo("a", "Up", Set.empty, Nil),
-        NodeInfo("b", "Unreachable", Set.empty, Nil),
-        NodeInfo("c", "Unreachable", Set.empty, Nil)
-      ), 0, Nil)
+      val status = ClusterStatus(
+        List(
+          NodeInfo("a", "Up", Set.empty, Nil),
+          NodeInfo("b", "Unreachable", Set.empty, Nil),
+          NodeInfo("c", "Unreachable", Set.empty, Nil)
+        ),
+        0,
+        Nil
+      )
       status.unreachableCount shouldBe 2
     }
   }
@@ -94,10 +98,14 @@ class ClusterStatusModelSpec extends AnyWordSpec with Matchers {
       status.isHealthy shouldBe true
     }
     "return false when any node is Unreachable" in {
-      val status = ClusterStatus(List(
-        NodeInfo("a", "Up", Set.empty, Nil),
-        NodeInfo("b", "Unreachable", Set.empty, Nil)
-      ), 0, Nil)
+      val status = ClusterStatus(
+        List(
+          NodeInfo("a", "Up", Set.empty, Nil),
+          NodeInfo("b", "Unreachable", Set.empty, Nil)
+        ),
+        0,
+        Nil
+      )
       status.isHealthy shouldBe false
     }
   }

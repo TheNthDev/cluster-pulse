@@ -13,7 +13,9 @@ class PrometheusMetricsRouteSpec extends AnyWordSpec with Matchers with Scalates
     List(
       NodeInfo("a", "Up", Set.empty, List(ShardInfo("s1", 3, Nil))),
       NodeInfo("b", "Unreachable", Set.empty, List(ShardInfo("s2", 2, Nil)))
-    ), 5, Nil
+    ),
+    5,
+    Nil
   )
 
   "PrometheusMetricsRoute" should {

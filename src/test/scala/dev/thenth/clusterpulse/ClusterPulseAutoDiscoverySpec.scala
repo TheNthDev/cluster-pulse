@@ -10,8 +10,8 @@ class ClusterPulseAutoDiscoverySpec extends ScalaTestWithActorTestKit with AnyWo
   "ClusterStatusTracker" should {
     "accept new type keys via RegisterTypeKey" in {
       val sharding = org.mockito.Mockito.mock(classOf[org.apache.pekko.cluster.sharding.typed.scaladsl.ClusterSharding])
-      val tracker = spawn(ClusterStatusTracker(sharding, Seq.empty, None, None, None, None))
-      
+      val tracker  = spawn(ClusterStatusTracker(sharding, Seq.empty, None, None, None, None))
+
       val typeKey = EntityTypeKey[String]("test-type")
       tracker ! ClusterStatusTracker.RegisterTypeKey(typeKey)
     }
@@ -21,18 +21,18 @@ class ClusterPulseAutoDiscoverySpec extends ScalaTestWithActorTestKit with AnyWo
     "provide a wrapper for sharding.init" in {
       import org.apache.pekko.cluster.sharding.typed.scaladsl.Entity
       import org.apache.pekko.actor.typed.scaladsl.Behaviors
-      
+
       val sharding = org.mockito.Mockito.mock(classOf[org.apache.pekko.cluster.sharding.typed.scaladsl.ClusterSharding])
-      
+
       val pulse = ClusterPulse.create(system, sharding)
-      
+
       val typeKey = EntityTypeKey[String]("test-type")
-      val entity = Entity(typeKey)(_ => Behaviors.empty)
-      
+      val entity  = Entity(typeKey)(_ => Behaviors.empty)
+
       org.mockito.Mockito.when(sharding.init(entity)).thenReturn(null)
-      
+
       pulse.shardingInit(entity)
-      
+
       // Verify that it correctly delegates to sharding
       org.mockito.Mockito.verify(sharding).init(entity)
     }

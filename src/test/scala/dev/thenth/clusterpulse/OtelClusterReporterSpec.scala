@@ -17,17 +17,18 @@ class OtelClusterReporterSpec extends AnyWordSpec with Matchers {
     sbd: Option[SplitBrainDetector] = None,
     history: Option[ClusterHistory] = None
   ): (OtelClusterReporter, InMemoryMetricReader) = {
-    val reader = InMemoryMetricReader.create()
+    val reader        = InMemoryMetricReader.create()
     val meterProvider = SdkMeterProvider.builder().registerMetricReader(reader).build()
-    val sdk = OpenTelemetrySdk.builder().setMeterProvider(meterProvider).build()
-    val reporter = OtelClusterReporter(sdk, sbd, history)
+    val sdk           = OpenTelemetrySdk.builder().setMeterProvider(meterProvider).build()
+    val reporter      = OtelClusterReporter(sdk, sbd, history)
     (reporter, reader)
   }
 
   private def metricValue(reader: InMemoryMetricReader, name: String): Long = {
     import scala.jdk.CollectionConverters.*
     val metrics = reader.collectAllMetrics().asScala
-    val metric = metrics.find(_.getName == name)
+    val metric = metrics
+      .find(_.getName == name)
       .getOrElse(fail(s"Metric '$name' not found. Available: ${metrics.map(_.getName).mkString(", ")}"))
     val points = metric.getLongGaugeData.getPoints.asScala
     points.headOption.map(_.getValue).getOrElse(fail(s"No data points for metric '$name'"))
@@ -36,7 +37,8 @@ class OtelClusterReporterSpec extends AnyWordSpec with Matchers {
   private def metricDoubleValue(reader: InMemoryMetricReader, name: String): Double = {
     import scala.jdk.CollectionConverters.*
     val metrics = reader.collectAllMetrics().asScala
-    val metric = metrics.find(_.getName == name)
+    val metric = metrics
+      .find(_.getName == name)
       .getOrElse(fail(s"Metric '$name' not found. Available: ${metrics.map(_.getName).mkString(", ")}"))
     val points = metric.getDoubleGaugeData.getPoints.asScala
     points.headOption.map(_.getValue).getOrElse(fail(s"No data points for metric '$name'"))
@@ -45,7 +47,8 @@ class OtelClusterReporterSpec extends AnyWordSpec with Matchers {
   private def metricLongPointsByAttr(reader: InMemoryMetricReader, name: String): Map[String, Long] = {
     import scala.jdk.CollectionConverters.*
     val metrics = reader.collectAllMetrics().asScala
-    val metric = metrics.find(_.getName == name)
+    val metric = metrics
+      .find(_.getName == name)
       .getOrElse(fail(s"Metric '$name' not found"))
     metric.getLongGaugeData.getPoints.asScala.map { pt =>
       val addr = pt.getAttributes.get(io.opentelemetry.api.common.AttributeKey.stringKey("node_address"))
@@ -56,7 +59,8 @@ class OtelClusterReporterSpec extends AnyWordSpec with Matchers {
   private def metricLongPointsByKey(reader: InMemoryMetricReader, name: String, attrKey: String): Map[String, Long] = {
     import scala.jdk.CollectionConverters.*
     val metrics = reader.collectAllMetrics().asScala
-    val metric = metrics.find(_.getName == name)
+    val metric = metrics
+      .find(_.getName == name)
       .getOrElse(fail(s"Metric '$name' not found"))
     metric.getLongGaugeData.getPoints.asScala.map { pt =>
       val key = pt.getAttributes.get(io.opentelemetry.api.common.AttributeKey.stringKey(attrKey))
@@ -85,7 +89,8 @@ class OtelClusterReporterSpec extends AnyWordSpec with Matchers {
     "overwrite the previous status on a second update" in {
       val reporter = noopReporter
       val statusV1 = ClusterStatus(List(NodeInfo("addr-1", "Up", Set.empty, Nil)), 0, Nil)
-      val statusV2 = ClusterStatus(List(NodeInfo("addr-1", "Up", Set.empty, Nil), NodeInfo("addr-2", "Up", Set.empty, Nil)), 0, Nil)
+      val statusV2 =
+        ClusterStatus(List(NodeInfo("addr-1", "Up", Set.empty, Nil), NodeInfo("addr-2", "Up", Set.empty, Nil)), 0, Nil)
       reporter.update(statusV1)
       reporter.update(statusV2)
       reporter.currentStatus.nodes should have size 2
@@ -93,7 +98,7 @@ class OtelClusterReporterSpec extends AnyWordSpec with Matchers {
 
     "handle an update that removes all nodes (cluster shutdown)" in {
       val reporter = noopReporter
-      val initial = ClusterStatus(List(NodeInfo("addr-1", "Up", Set.empty, Nil)), 0, Nil)
+      val initial  = ClusterStatus(List(NodeInfo("addr-1", "Up", Set.empty, Nil)), 0, Nil)
       reporter.update(initial)
       reporter.update(ClusterStatus(Nil, 0, Nil))
       reporter.currentStatus.nodes shouldBe empty
@@ -102,9 +107,7 @@ class OtelClusterReporterSpec extends AnyWordSpec with Matchers {
     "be safe to call update concurrently (AtomicReference guarantee)" in {
       val reporter = noopReporter
       val threads = (1 to 10).map { i =>
-        new Thread(() =>
-          reporter.update(ClusterStatus(List(NodeInfo(s"addr-$i", "Up", Set.empty, Nil)), 0, Nil))
-        )
+        new Thread(() => reporter.update(ClusterStatus(List(NodeInfo(s"addr-$i", "Up", Set.empty, Nil)), 0, Nil)))
       }
       threads.foreach(_.start())
       threads.foreach(_.join())
@@ -174,14 +177,24 @@ class OtelClusterReporterSpec extends AnyWordSpec with Matchers {
       val (reporter, reader) = sdkReporter()
       val status = ClusterStatus(
         nodes = List(
-          NodeInfo("addr-1", "Up", Set.empty, List(
-            ShardInfo("s1", 3, Nil, "UserEntity"),
-            ShardInfo("s2", 2, Nil, "OrderEntity")
-          )),
-          NodeInfo("addr-2", "Up", Set.empty, List(
-            ShardInfo("s3", 1, Nil, "UserEntity"),
-            ShardInfo("s4", 4, Nil, "OrderEntity")
-          ))
+          NodeInfo(
+            "addr-1",
+            "Up",
+            Set.empty,
+            List(
+              ShardInfo("s1", 3, Nil, "UserEntity"),
+              ShardInfo("s2", 2, Nil, "OrderEntity")
+            )
+          ),
+          NodeInfo(
+            "addr-2",
+            "Up",
+            Set.empty,
+            List(
+              ShardInfo("s3", 1, Nil, "UserEntity"),
+              ShardInfo("s4", 4, Nil, "OrderEntity")
+            )
+          )
         ),
         totalEntityCount = 10,
         activeEntities = Nil
@@ -203,7 +216,7 @@ class OtelClusterReporterSpec extends AnyWordSpec with Matchers {
       )
       reporter.update(status)
       import scala.jdk.CollectionConverters.*
-      val metrics = reader.collectAllMetrics().asScala
+      val metrics      = reader.collectAllMetrics().asScala
       val regionMetric = metrics.find(_.getName == "cluster.pulse.shard.region.count")
       regionMetric.foreach { m =>
         m.getLongGaugeData.getPoints.asScala shouldBe empty
@@ -271,7 +284,7 @@ class OtelClusterReporterSpec extends AnyWordSpec with Matchers {
     }
 
     "report split-brain gauge when SplitBrainDetector is provided" in {
-      val sbd = SplitBrainDetector()
+      val sbd                = SplitBrainDetector()
       val (reporter, reader) = sdkReporter(sbd = Some(sbd))
       // Initially not detected
       metricValue(reader, "cluster.pulse.split_brain.detected") shouldBe 0L
@@ -290,13 +303,14 @@ class OtelClusterReporterSpec extends AnyWordSpec with Matchers {
     }
 
     "report history gauges when ClusterHistory is provided" in {
-      val history = ClusterHistory(maxSize = 5)
+      val history            = ClusterHistory(maxSize = 5)
       val (reporter, reader) = sdkReporter(history = Some(history))
       // Initially empty
       metricValue(reader, "cluster.pulse.history.size") shouldBe 0L
       // Record some snapshots
       val s1 = ClusterStatus(List(NodeInfo("addr-1", "Up", Set.empty, Nil)), 0, Nil)
-      val s2 = ClusterStatus(List(NodeInfo("addr-1", "Up", Set.empty, Nil), NodeInfo("addr-2", "Up", Set.empty, Nil)), 0, Nil)
+      val s2 =
+        ClusterStatus(List(NodeInfo("addr-1", "Up", Set.empty, Nil), NodeInfo("addr-2", "Up", Set.empty, Nil)), 0, Nil)
       history.record(s1)
       history.record(s2)
       metricValue(reader, "cluster.pulse.history.size") shouldBe 2L
@@ -304,8 +318,8 @@ class OtelClusterReporterSpec extends AnyWordSpec with Matchers {
     }
 
     "report all gauges with both SplitBrainDetector and ClusterHistory" in {
-      val sbd = SplitBrainDetector()
-      val history = ClusterHistory(maxSize = 5)
+      val sbd                = SplitBrainDetector()
+      val history            = ClusterHistory(maxSize = 5)
       val (reporter, reader) = sdkReporter(sbd = Some(sbd), history = Some(history))
       val status = ClusterStatus(
         nodes = List(

@@ -23,22 +23,27 @@ object ClusterStatusTracker {
 
   val ClusterStatusTrackerKey: ServiceKey[Command] = ServiceKey[Command]("ClusterStatusTracker")
 
-  sealed trait Command                              extends ClusterPulseSerializable
-  sealed trait Response                             extends ClusterPulseSerializable
-  private case object Tick                          extends Command
-  private case object ReportMetrics                 extends Command
+  sealed trait Command                                  extends ClusterPulseSerializable
+  sealed trait Response                                 extends ClusterPulseSerializable
+  private case object Tick                              extends Command
+  private case object ReportMetrics                     extends Command
   case class RegisterTypeKey(typeKey: EntityTypeKey[?]) extends Command
-  case class GetStatus(replyTo: ActorRef[Response]) extends Command
+  case class GetStatus(replyTo: ActorRef[Response])     extends Command
 
-  case class GetLocalState(replyTo: ActorRef[LocalStateResponse])                extends Command
-  case class LocalStateResponse(address: String, state: CurrentShardRegionState, statesByRegion: Map[String, CurrentShardRegionState] = Map.empty) extends Response
+  case class GetLocalState(replyTo: ActorRef[LocalStateResponse]) extends Command
+  case class LocalStateResponse(
+    address: String,
+    state: CurrentShardRegionState,
+    statesByRegion: Map[String, CurrentShardRegionState] = Map.empty
+  ) extends Response
 
   private case class ReportClusterStats(
     replyTo: Option[ActorRef[Response]],
     members: List[org.apache.pekko.cluster.Member],
     allLocalStates: List[LocalStateResponse],
     span: Option[Span]
-  ) extends Command with ClusterPulseSerializable
+  ) extends Command
+      with ClusterPulseSerializable
 
   case class ClusterStatusResponse(status: ClusterStatus) extends Response
 
@@ -61,9 +66,9 @@ object ClusterStatusTracker {
     splitBrainDetector: Option[SplitBrainDetector],
     tracer: Option[Tracer]
   ): Behavior[Command] = Behaviors.setup { context =>
-    val settings = ClusterPulseSettings(context.system.settings.config)
+    val settings                  = ClusterPulseSettings(context.system.settings.config)
     implicit val timeout: Timeout = settings.askTimeout
-    val includeEntityIds = settings.includeEntityIds
+    val includeEntityIds          = settings.includeEntityIds
 
     def active(currentTypeKeys: Set[EntityTypeKey[?]]): Behavior[Command] = Behaviors.withTimers { timers =>
       context.system.receptionist ! Receptionist.Register(ClusterStatusTrackerKey, context.self)
@@ -97,18 +102,20 @@ object ClusterStatusTracker {
 
         case GetLocalState(replyTo) =>
           implicit val ec: ExecutionContextExecutor = context.system.executionContext
-          val address = cluster.selfMember.address.toString
+          val address                               = cluster.selfMember.address.toString
 
           val allStatesFuture = Future.sequence(currentTypeKeys.toSeq.map { typeKey =>
-            sharding.shardState.ask[CurrentShardRegionState](
-              GetShardRegionState(typeKey, _)
-            )(timeout, context.system.scheduler).map(s => typeKey.name -> s)
+            sharding.shardState
+              .ask[CurrentShardRegionState](
+                GetShardRegionState(typeKey, _)
+              )(timeout, context.system.scheduler)
+              .map(s => typeKey.name -> s)
           })
 
           allStatesFuture.onComplete {
             case Success(pairs) =>
               val byRegion = pairs.toMap
-              val merged = CurrentShardRegionState(pairs.flatMap(_._2.shards).toSet)
+              val merged   = CurrentShardRegionState(pairs.flatMap(_._2.shards).toSet)
               replyTo ! LocalStateResponse(address, merged, byRegion)
             case Failure(_) =>
               replyTo ! LocalStateResponse(address, CurrentShardRegionState(Set.empty))
@@ -119,25 +126,28 @@ object ClusterStatusTracker {
           val nodes = members.map { m =>
             val nodeAddress    = m.address.toString
             val localStateResp = allLocalStates.find(_.address == nodeAddress)
-            val shards         = localStateResp.map { resp =>
-              // Build a lookup from shardId to region type name
-              val shardToRegion: Map[String, String] = resp.statesByRegion.flatMap { case (regionName, regionState) =>
-                regionState.shards.map(s => s.shardId -> regionName)
+            val shards = localStateResp
+              .map { resp =>
+                // Build a lookup from shardId to region type name
+                val shardToRegion: Map[String, String] = resp.statesByRegion.flatMap { case (regionName, regionState) =>
+                  regionState.shards.map(s => s.shardId -> regionName)
+                }
+                resp.state.shards.map { s =>
+                  val ids = if (includeEntityIds) s.entityIds.toList else Nil
+                  ShardInfo(s.shardId, s.entityIds.size, ids, shardToRegion.getOrElse(s.shardId, ""))
+                }.toList
               }
-              resp.state.shards.map { s =>
-                val ids = if (includeEntityIds) s.entityIds.toList else Nil
-                ShardInfo(s.shardId, s.entityIds.size, ids, shardToRegion.getOrElse(s.shardId, ""))
-              }.toList
-            }.toList.flatten
+              .toList
+              .flatten
             val status =
               if (cluster.state.unreachable.contains(m)) "Unreachable" else m.status.toString
             NodeInfo(nodeAddress, status, m.roles, shards)
           }
-          val totalCount        = nodes.flatMap(_.shards.map(_.entityCount)).sum
+          val totalCount = nodes.flatMap(_.shards.map(_.entityCount)).sum
           val allActiveEntities =
             if (includeEntityIds) allLocalStates.flatMap(_.state.shards.toSeq.flatMap(_.entityIds))
             else Nil
-          val clusterStatus     = ClusterStatus(nodes, totalCount, allActiveEntities)
+          val clusterStatus = ClusterStatus(nodes, totalCount, allActiveEntities)
 
           replyTo.foreach(_ ! ClusterStatusResponse(clusterStatus))
           reporter.foreach(_.update(clusterStatus))
@@ -167,7 +177,7 @@ object ClusterStatusTracker {
     tracer: Option[Tracer]
   ): Unit = {
     implicit val ec: ExecutionContextExecutor = context.system.executionContext
-    implicit val t: Timeout = timeout
+    implicit val t: Timeout                   = timeout
 
     val span = tracer.map { t =>
       t.spanBuilder("cluster-pulse.gather-stats")

@@ -60,14 +60,13 @@ object ClusterEvent {
         case JsString("NodeUnreachable") => json.convertTo[NodeUnreachable]
         case JsString("NodeReachable")   => json.convertTo[NodeReachable]
         case JsString("ShardRebalanced") => json.convertTo[ShardRebalanced]
-        case other => spray.json.deserializationError(s"Unknown ClusterEvent type: $other")
+        case other                       => spray.json.deserializationError(s"Unknown ClusterEvent type: $other")
       }
     }
   }
 
-  /**
-   * Diff two consecutive ClusterStatus snapshots and produce structured events.
-   */
+  /** Diff two consecutive ClusterStatus snapshots and produce structured events.
+    */
   def diff(previous: ClusterStatus, current: ClusterStatus, timestamp: Long): List[ClusterEvent] = {
     val prevAddresses = previous.nodes.map(_.address).toSet
     val currAddresses = current.nodes.map(_.address).toSet

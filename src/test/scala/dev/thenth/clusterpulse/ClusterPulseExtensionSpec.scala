@@ -7,19 +7,21 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatest.matchers.should.Matchers
 
 object ClusterPulseExtensionSpec {
-  val config = ConfigFactory.parseString(
-    """
+  val config = ConfigFactory
+    .parseString(
+      """
       |pekko.actor.provider = cluster
       |pekko.remote.artery.canonical.port = 0
       |pekko.remote.artery.canonical.hostname = 127.0.0.1
       |""".stripMargin
-  ).withFallback(ConfigFactory.load())
+    )
+    .withFallback(ConfigFactory.load())
 }
 
 class ClusterPulseExtensionSpec
-  extends ScalaTestWithActorTestKit(ClusterPulseExtensionSpec.config)
-  with AnyWordSpecLike
-  with Matchers {
+    extends ScalaTestWithActorTestKit(ClusterPulseExtensionSpec.config)
+    with AnyWordSpecLike
+    with Matchers {
 
   "ClusterPulse Extension" should {
 
@@ -44,7 +46,7 @@ class ClusterPulseExtensionSpec
 
     "support registerEntity without error" in {
       import org.apache.pekko.cluster.sharding.typed.scaladsl.EntityTypeKey
-      val pulse = ClusterPulse(system)
+      val pulse   = ClusterPulse(system)
       val typeKey = EntityTypeKey[String]("ext-test-type")
       noException should be thrownBy pulse.registerEntity(typeKey)
     }

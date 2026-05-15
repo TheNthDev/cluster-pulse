@@ -28,7 +28,7 @@ class ClusterHistorySpec extends AnyWordSpec with Matchers {
     }
 
     "emit no events on first snapshot" in {
-      val h = new ClusterHistory(10)
+      val h      = new ClusterHistory(10)
       val events = h.record(mkStatus("a"))
       events shouldBe empty
     }
@@ -79,11 +79,11 @@ class ClusterHistorySpec extends AnyWordSpec with Matchers {
     "be thread-safe under concurrent writes" in {
       val h = new ClusterHistory(100)
       val threads = (1 to 10).map { i =>
-        new Thread(() => {
+        new Thread(() =>
           (1 to 20).foreach { j =>
             h.record(mkStatus(s"node-$i-$j"))
           }
-        })
+        )
       }
       threads.foreach(_.start())
       threads.foreach(_.join())

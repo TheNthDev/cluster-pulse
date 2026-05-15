@@ -17,8 +17,9 @@ import io.opentelemetry.sdk.metrics.SdkMeterProvider
 import io.opentelemetry.sdk.testing.exporter.InMemoryMetricReader
 
 object ClusterStatusTrackerSpec {
-  val config = ConfigFactory.parseString(
-    """
+  val config = ConfigFactory
+    .parseString(
+      """
       |pekko {
       |  actor {
       |    provider = cluster
@@ -45,14 +46,15 @@ object ClusterStatusTrackerSpec {
       |  include-entity-ids = true
       |}
       |""".stripMargin
-  ).withFallback(ConfigFactory.load())
+    )
+    .withFallback(ConfigFactory.load())
 }
 
 class ClusterStatusTrackerSpec
-  extends ScalaTestWithActorTestKit(ClusterStatusTrackerSpec.config)
-  with AnyWordSpecLike
-  with Matchers
-  with ScalaFutures {
+    extends ScalaTestWithActorTestKit(ClusterStatusTrackerSpec.config)
+    with AnyWordSpecLike
+    with Matchers
+    with ScalaFutures {
 
   implicit override val patienceConfig: PatienceConfig =
     PatienceConfig(timeout = Span(5, Seconds), interval = Span(100, Millis))
@@ -115,16 +117,19 @@ class ClusterStatusTrackerSpec
     }
 
     "LocalStateResponse with empty shard state" in {
-      val response = ClusterStatusTracker.LocalStateResponse("pekko://sys@127.0.0.1:2551", CurrentShardRegionState(Set.empty))
+      val response =
+        ClusterStatusTracker.LocalStateResponse("pekko://sys@127.0.0.1:2551", CurrentShardRegionState(Set.empty))
       response.state.shards shouldBe empty
     }
 
     "LocalStateResponse with multiple shards" in {
-      val shardState = CurrentShardRegionState(Set(
-        ShardState("shard-1", Set("e1")),
-        ShardState("shard-2", Set("e2", "e3")),
-        ShardState("shard-3", Set.empty)
-      ))
+      val shardState = CurrentShardRegionState(
+        Set(
+          ShardState("shard-1", Set("e1")),
+          ShardState("shard-2", Set("e2", "e3")),
+          ShardState("shard-3", Set.empty)
+        )
+      )
       val response = ClusterStatusTracker.LocalStateResponse("addr-1", shardState)
       response.state.shards should have size 3
       response.state.shards.flatMap(_.entityIds) should have size 3
@@ -169,8 +174,8 @@ class ClusterStatusTrackerSpec
 
     "spawn with empty type keys and respond to GetStatus" in {
       val sharding = org.mockito.Mockito.mock(classOf[ClusterSharding])
-      val tracker = spawn(ClusterStatusTracker(sharding, Seq.empty, None, None, None, None))
-      val probe = TestProbe[ClusterStatusTracker.Response]()
+      val tracker  = spawn(ClusterStatusTracker(sharding, Seq.empty, None, None, None, None))
+      val probe    = TestProbe[ClusterStatusTracker.Response]()
       tracker ! ClusterStatusTracker.GetStatus(probe.ref)
       val response = probe.receiveMessage()
       response shouldBe a[ClusterStatusTracker.ClusterStatusResponse]
@@ -178,9 +183,9 @@ class ClusterStatusTrackerSpec
 
     "spawn with single type key via backward-compatible apply" in {
       val sharding = org.mockito.Mockito.mock(classOf[ClusterSharding])
-      val typeKey = EntityTypeKey[String]("single-key-test")
-      val tracker = spawn(ClusterStatusTracker(sharding, typeKey))
-      val probe = TestProbe[ClusterStatusTracker.Response]()
+      val typeKey  = EntityTypeKey[String]("single-key-test")
+      val tracker  = spawn(ClusterStatusTracker(sharding, typeKey))
+      val probe    = TestProbe[ClusterStatusTracker.Response]()
       tracker ! ClusterStatusTracker.GetStatus(probe.ref)
       val response = probe.receiveMessage()
       response shouldBe a[ClusterStatusTracker.ClusterStatusResponse]
@@ -188,8 +193,8 @@ class ClusterStatusTrackerSpec
 
     "accept RegisterTypeKey and continue operating" in {
       val sharding = org.mockito.Mockito.mock(classOf[ClusterSharding])
-      val tracker = spawn(ClusterStatusTracker(sharding, Seq.empty, None, None, None, None))
-      val typeKey = EntityTypeKey[String]("dynamic-key")
+      val tracker  = spawn(ClusterStatusTracker(sharding, Seq.empty, None, None, None, None))
+      val typeKey  = EntityTypeKey[String]("dynamic-key")
       tracker ! ClusterStatusTracker.RegisterTypeKey(typeKey)
       // Verify the actor is still alive by sending GetStatus
       val probe = TestProbe[ClusterStatusTracker.Response]()
@@ -200,8 +205,8 @@ class ClusterStatusTrackerSpec
     "update reporter when provided" in {
       val sharding = org.mockito.Mockito.mock(classOf[ClusterSharding])
       val reporter = OtelClusterReporter(OpenTelemetry.noop())
-      val tracker = spawn(ClusterStatusTracker(sharding, Seq.empty, Some(reporter), None, None, None))
-      val probe = TestProbe[ClusterStatusTracker.Response]()
+      val tracker  = spawn(ClusterStatusTracker(sharding, Seq.empty, Some(reporter), None, None, None))
+      val probe    = TestProbe[ClusterStatusTracker.Response]()
       tracker ! ClusterStatusTracker.GetStatus(probe.ref)
       val response = probe.receiveMessage()
       response shouldBe a[ClusterStatusTracker.ClusterStatusResponse]
@@ -209,9 +214,9 @@ class ClusterStatusTrackerSpec
 
     "update history when provided" in {
       val sharding = org.mockito.Mockito.mock(classOf[ClusterSharding])
-      val history = ClusterHistory(maxSize = 10)
-      val tracker = spawn(ClusterStatusTracker(sharding, Seq.empty, None, Some(history), None, None))
-      val probe = TestProbe[ClusterStatusTracker.Response]()
+      val history  = ClusterHistory(maxSize = 10)
+      val tracker  = spawn(ClusterStatusTracker(sharding, Seq.empty, None, Some(history), None, None))
+      val probe    = TestProbe[ClusterStatusTracker.Response]()
       tracker ! ClusterStatusTracker.GetStatus(probe.ref)
       probe.receiveMessage()
       eventually {
@@ -221,9 +226,9 @@ class ClusterStatusTrackerSpec
 
     "update split-brain detector when provided" in {
       val sharding = org.mockito.Mockito.mock(classOf[ClusterSharding])
-      val sbd = SplitBrainDetector()
-      val tracker = spawn(ClusterStatusTracker(sharding, Seq.empty, None, None, Some(sbd), None))
-      val probe = TestProbe[ClusterStatusTracker.Response]()
+      val sbd      = SplitBrainDetector()
+      val tracker  = spawn(ClusterStatusTracker(sharding, Seq.empty, None, None, Some(sbd), None))
+      val probe    = TestProbe[ClusterStatusTracker.Response]()
       tracker ! ClusterStatusTracker.GetStatus(probe.ref)
       probe.receiveMessage()
       // SBD should have been updated (not detected since single node is Up)
@@ -235,10 +240,10 @@ class ClusterStatusTrackerSpec
     "update all optional components together" in {
       val sharding = org.mockito.Mockito.mock(classOf[ClusterSharding])
       val reporter = OtelClusterReporter(OpenTelemetry.noop())
-      val history = ClusterHistory(maxSize = 10)
-      val sbd = SplitBrainDetector()
-      val tracker = spawn(ClusterStatusTracker(sharding, Seq.empty, Some(reporter), Some(history), Some(sbd), None))
-      val probe = TestProbe[ClusterStatusTracker.Response]()
+      val history  = ClusterHistory(maxSize = 10)
+      val sbd      = SplitBrainDetector()
+      val tracker  = spawn(ClusterStatusTracker(sharding, Seq.empty, Some(reporter), Some(history), Some(sbd), None))
+      val probe    = TestProbe[ClusterStatusTracker.Response]()
       tracker ! ClusterStatusTracker.GetStatus(probe.ref)
       probe.receiveMessage() shouldBe a[ClusterStatusTracker.ClusterStatusResponse]
       eventually {
@@ -248,8 +253,8 @@ class ClusterStatusTrackerSpec
 
     "respond to GetLocalState with empty type keys" in {
       val sharding = org.mockito.Mockito.mock(classOf[ClusterSharding])
-      val tracker = spawn(ClusterStatusTracker(sharding, Seq.empty, None, None, None, None))
-      val probe = TestProbe[ClusterStatusTracker.LocalStateResponse]()
+      val tracker  = spawn(ClusterStatusTracker(sharding, Seq.empty, None, None, None, None))
+      val probe    = TestProbe[ClusterStatusTracker.LocalStateResponse]()
       tracker ! ClusterStatusTracker.GetLocalState(probe.ref)
       val response = probe.receiveMessage()
       response.address should not be empty

@@ -12,27 +12,26 @@ import io.opentelemetry.api.trace.Tracer
 import dev.thenth.clusterpulse.ClusterStatusTracker.*
 import dev.thenth.clusterpulse.model.ClusterStatus
 
-/**
- * Pekko Extension for cluster-pulse.
- *
- * Idiomatic usage via the Extension mechanism:
- * {{{
- * // Access the singleton extension (auto-creates tracker with defaults)
- * val pulse = ClusterPulse(system)
- * val status: Future[ClusterStatus] = pulse.status
- *
- * // Auto-discover entity types
- * val ref = pulse.shardingInit(Entity(MyEntity.TypeKey)(createBehavior))
- * }}}
- *
- * Standalone (non-extension) usage for custom configurations:
- * {{{
- * val pulse = ClusterPulse.create(system, sharding, Seq(MyEntity.TypeKey))
- * }}}
- */
+/** Pekko Extension for cluster-pulse.
+  *
+  * Idiomatic usage via the Extension mechanism:
+  * {{{
+  * // Access the singleton extension (auto-creates tracker with defaults)
+  * val pulse = ClusterPulse(system)
+  * val status: Future[ClusterStatus] = pulse.status
+  *
+  * // Auto-discover entity types
+  * val ref = pulse.shardingInit(Entity(MyEntity.TypeKey)(createBehavior))
+  * }}}
+  *
+  * Standalone (non-extension) usage for custom configurations:
+  * {{{
+  * val pulse = ClusterPulse.create(system, sharding, Seq(MyEntity.TypeKey))
+  * }}}
+  */
 class ClusterPulse(system: ActorSystem[?]) extends Extension {
 
-  private given ActorSystem[?] = system
+  private given ActorSystem[?]  = system
   private given ClusterSharding = ClusterSharding(system)
 
   private val settings = ClusterPulseSettings(system.settings.config)
@@ -48,7 +47,12 @@ class ClusterPulse(system: ActorSystem[?]) extends Extension {
     system.toClassic.toTyped
       .systemActorOf(
         ClusterStatusTracker(
-          summon[ClusterSharding], Seq.empty, None, _history, _splitBrainDetector, None
+          summon[ClusterSharding],
+          Seq.empty,
+          None,
+          _history,
+          _splitBrainDetector,
+          None
         ),
         "ClusterPulseTracker"
       )
@@ -75,15 +79,13 @@ class ClusterPulse(system: ActorSystem[?]) extends Extension {
   /** Live stream of cluster status snapshots. */
   def statusStream(): Source[ClusterStatus, ?] = _service.statusStream()
 
-  /**
-   * Register an entity type key for tracking.
-   */
+  /** Register an entity type key for tracking.
+    */
   def registerEntity(typeKey: EntityTypeKey[?]): Unit =
     _tracker ! RegisterTypeKey(typeKey)
 
-  /**
-   * Wrapper for `sharding.init` that automatically registers the entity type key.
-   */
+  /** Wrapper for `sharding.init` that automatically registers the entity type key.
+    */
   def shardingInit[M, E](entity: Entity[M, E]): ActorRef[E] = {
     val ref = summon[ClusterSharding].init(entity)
     registerEntity(entity.typeKey)
@@ -91,12 +93,10 @@ class ClusterPulse(system: ActorSystem[?]) extends Extension {
   }
 }
 
-/**
- * ExtensionId for ClusterPulse — provides singleton access via `ClusterPulse(system)`.
- *
- * Also provides `create` factory methods for standalone (non-extension) instances
- * with custom configurations.
- */
+/** ExtensionId for ClusterPulse — provides singleton access via `ClusterPulse(system)`.
+  *
+  * Also provides `create` factory methods for standalone (non-extension) instances with custom configurations.
+  */
 object ClusterPulse extends ExtensionId[ClusterPulse] {
 
   override def createExtension(system: ActorSystem[?]): ClusterPulse =
@@ -106,9 +106,8 @@ object ClusterPulse extends ExtensionId[ClusterPulse] {
   // Standalone factory methods (non-extension, for custom configurations)
   // ---------------------------------------------------------------------------
 
-  /**
-   * Create a standalone ClusterPulse instance without initial keys (rely on auto-discovery).
-   */
+  /** Create a standalone ClusterPulse instance without initial keys (rely on auto-discovery).
+    */
   def create(
     system: ActorSystem[?],
     sharding: ClusterSharding,
@@ -118,9 +117,8 @@ object ClusterPulse extends ExtensionId[ClusterPulse] {
     tracer: Option[Tracer] = None
   ): StandaloneClusterPulse = create(system, sharding, Seq.empty, reporter, history, splitBrainDetector, tracer)
 
-  /**
-   * Create a standalone ClusterPulse instance with a single entity type key.
-   */
+  /** Create a standalone ClusterPulse instance with a single entity type key.
+    */
   def create[T](
     system: ActorSystem[?],
     sharding: ClusterSharding,
@@ -131,9 +129,8 @@ object ClusterPulse extends ExtensionId[ClusterPulse] {
     tracer: Option[Tracer]
   ): StandaloneClusterPulse = create(system, sharding, Seq(typeKey), reporter, history, splitBrainDetector, tracer)
 
-  /**
-   * Create a standalone ClusterPulse instance with multiple entity type keys.
-   */
+  /** Create a standalone ClusterPulse instance with multiple entity type keys.
+    */
   def create(
     system: ActorSystem[?],
     sharding: ClusterSharding,
@@ -154,10 +151,9 @@ object ClusterPulse extends ExtensionId[ClusterPulse] {
   }
 }
 
-/**
- * A standalone (non-extension) ClusterPulse instance for custom configurations.
- * Use `ClusterPulse.create(...)` to construct.
- */
+/** A standalone (non-extension) ClusterPulse instance for custom configurations. Use `ClusterPulse.create(...)` to
+  * construct.
+  */
 class StandaloneClusterPulse(
   val tracker: ActorRef[Command],
   val service: ClusterStatusService,
@@ -171,15 +167,13 @@ class StandaloneClusterPulse(
   /** Live stream of cluster status snapshots. */
   def statusStream(): Source[ClusterStatus, ?] = service.statusStream()
 
-  /**
-   * Register an entity type key for tracking.
-   */
+  /** Register an entity type key for tracking.
+    */
   def registerEntity(typeKey: EntityTypeKey[?]): Unit =
     tracker ! RegisterTypeKey(typeKey)
 
-  /**
-   * Wrapper for `sharding.init` that automatically registers the entity type key.
-   */
+  /** Wrapper for `sharding.init` that automatically registers the entity type key.
+    */
   def shardingInit[M, E](entity: Entity[M, E]): ActorRef[E] = {
     val ref = sharding.init(entity)
     registerEntity(entity.typeKey)

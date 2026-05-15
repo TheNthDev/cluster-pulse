@@ -21,8 +21,9 @@ class ClusterPulseSettingsSpec extends AnyWordSpec with Matchers {
     }
 
     "allow overriding via application config" in {
-      val overrides = ConfigFactory.parseString(
-        """
+      val overrides = ConfigFactory
+        .parseString(
+          """
           |cluster-pulse {
           |  report-interval = 30s
           |  ask-timeout = 10s
@@ -31,7 +32,8 @@ class ClusterPulseSettingsSpec extends AnyWordSpec with Matchers {
           |  split-brain-membership-threshold = 0.3
           |}
           |""".stripMargin
-      ).withFallback(ConfigFactory.load())
+        )
+        .withFallback(ConfigFactory.load())
       val settings = ClusterPulseSettings(overrides)
       settings.reportInterval shouldBe 30.seconds
       settings.askTimeout.duration shouldBe 10.seconds
@@ -42,13 +44,15 @@ class ClusterPulseSettingsSpec extends AnyWordSpec with Matchers {
     }
 
     "allow disabling entity ID enumeration" in {
-      val overrides = ConfigFactory.parseString(
-        """
+      val overrides = ConfigFactory
+        .parseString(
+          """
           |cluster-pulse {
           |  include-entity-ids = false
           |}
           |""".stripMargin
-      ).withFallback(ConfigFactory.load())
+        )
+        .withFallback(ConfigFactory.load())
       val settings = ClusterPulseSettings(overrides)
       settings.includeEntityIds shouldBe false
     }

@@ -7,18 +7,16 @@ import org.apache.pekko.http.scaladsl.server.Route
 
 import dev.thenth.clusterpulse.model.ClusterStatus
 
-/**
- * Optional Pekko HTTP route that exposes cluster-pulse metrics in Prometheus
- * exposition format at `/metrics`. Useful for environments that run Prometheus
- * but not an OpenTelemetry Collector.
- *
- * Usage:
- * {{{
- * val metricsRoute = PrometheusMetricsRoute(statusProvider, splitBrainDetector, history)
- * // Concatenate with your existing routes:
- * val allRoutes = yourRoutes ~ metricsRoute.route
- * }}}
- */
+/** Optional Pekko HTTP route that exposes cluster-pulse metrics in Prometheus exposition format at `/metrics`. Useful
+  * for environments that run Prometheus but not an OpenTelemetry Collector.
+  *
+  * Usage:
+  * {{{
+  * val metricsRoute = PrometheusMetricsRoute(statusProvider, splitBrainDetector, history)
+  * // Concatenate with your existing routes:
+  * val allRoutes = yourRoutes ~ metricsRoute.route
+  * }}}
+  */
 class PrometheusMetricsRoute(
   statusProvider: () => ClusterStatus,
   splitBrainDetector: Option[SplitBrainDetector] = None,
@@ -27,7 +25,8 @@ class PrometheusMetricsRoute(
 
   private val prometheusTextType: ContentType.WithFixedCharset = ContentType.WithFixedCharset(
     MediaType.customWithFixedCharset(
-      "text", "plain",
+      "text",
+      "plain",
       HttpCharsets.`UTF-8`,
       params = Map("version" -> "0.0.4")
     )
@@ -60,7 +59,7 @@ class PrometheusMetricsRoute(
 
       // Per-region shard count
       val allShards = status.nodes.flatMap(_.shards)
-      val byRegion = allShards.filter(_.regionType.nonEmpty).groupBy(_.regionType)
+      val byRegion  = allShards.filter(_.regionType.nonEmpty).groupBy(_.regionType)
       if (byRegion.nonEmpty) {
         sb.append("# HELP cluster_pulse_shard_region_count Active shards per shard region\n")
         sb.append("# TYPE cluster_pulse_shard_region_count gauge\n")
