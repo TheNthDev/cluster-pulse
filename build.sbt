@@ -13,8 +13,14 @@ developers := List(
   Developer("TheNthDev", "cluster-pulse contributors", "", url("https://github.com/TheNthDev"))
 )
 
-publishMavenStyle := true
-publishTo         := sonatypePublishToBundle.value
+publishMavenStyle      := true
+pomIncludeRepository   := { _ => false }
+description            := "Lightweight cluster monitoring for Apache Pekko Cluster Sharding"
+publishTo := {
+  val centralSnapshots = "https://central.sonatype.com/repository/maven-snapshots/"
+  if (isSnapshot.value) Some("central-snapshots" at centralSnapshots)
+  else localStaging.value
+}
 
 val pekkoVersion     = "1.6.0"
 val pekkoHttpVersion = "1.3.0"

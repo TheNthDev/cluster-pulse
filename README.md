@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/TheNthDev/cluster-pulse/actions/workflows/ci.yml/badge.svg)](https://github.com/TheNthDev/cluster-pulse/actions/workflows/ci.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/dev.thenth/cluster-pulse_3)](https://central.sonatype.com/artifact/dev.thenth/cluster-pulse_3)
-[![codecov](https://codecov.io/gh/TheNthDev/cluster-pulse/graph/badge.svg)](https://codecov.io/gh/TheNthDev/cluster-pulse)
+[![codecov](https://codecov.io/gh/TheNthDev/cluster-pulse/branch/main/graph/badge.svg?token=R1EKBZ5YY2)](https://codecov.io/gh/TheNthDev/cluster-pulse)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 A standalone, reusable Scala library for monitoring [Apache Pekko](https://pekko.apache.org/) cluster state with optional [OpenTelemetry](https://opentelemetry.io/) metrics export.
@@ -28,7 +28,7 @@ A standalone, reusable Scala library for monitoring [Apache Pekko](https://pekko
 Add to your `build.sbt`:
 
 ```scala
-libraryDependencies += "dev.thenth.clusterpulse" %% "cluster-pulse" % "1.2.0"
+libraryDependencies += "dev.thenth.clusterpulse" %% "cluster-pulse" % "1.0.0"
 ```
 
 ## OpenTelemetry SDK — Bring Your Own
