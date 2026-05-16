@@ -37,4 +37,4 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-        run: sbt publishSigned sonatypeBundleRelease
+        run: sbt publishSigned sonaRelease
