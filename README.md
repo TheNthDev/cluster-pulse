@@ -222,6 +222,86 @@ cluster-pulse {
 
 All the above metrics are also available at `GET /metrics` in Prometheus exposition format when `PrometheusMetricsRoute` is wired into your HTTP server.
 
+## Observability Stack (Grafana + Prometheus)
+
+The `observability/` directory contains two ready-to-use Docker Compose setups for visualizing cluster-pulse metrics with Grafana and Prometheus. Both include a pre-provisioned Grafana instance with a Prometheus datasource and a cluster-pulse dashboard.
+
+### Option A: Prometheus Endpoint Scrape (default)
+
+Prometheus scrapes your application's `/metrics` endpoint directly via `PrometheusMetricsRoute`.
+
+1. Start your application with the `PrometheusMetricsRoute` serving on port `8085` (or update `observability/prometheus/prometheus.yml` to match your port).
+
+2. Launch the observability stack from the project root:
+
+   ```bash
+   docker compose -f observability/docker-compose.yml up -d
+   ```
+
+3. Open Grafana at [http://localhost:3000](http://localhost:3000) (default credentials: `admin` / `admin`).
+
+4. The **Cluster Pulse** dashboard is automatically provisioned and available under **Dashboards**.
+
+### Option B: OTel Collector Push (no public metrics endpoint)
+
+Your application pushes metrics to an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) via OTLP gRPC. The Collector exposes a Prometheus-compatible endpoint that Prometheus scrapes internally — your application never serves a public `/metrics` endpoint.
+
+```
+Your App  ──OTLP/gRPC──▶  OTel Collector  ◀──scrape──  Prometheus  ◀──query──  Grafana
+  (push, no /metrics)      (internal:8889)              (internal:9090)
+```
+
+1. Add the OTel SDK and OTLP exporter to your `build.sbt`:
+
+   ```scala
+   libraryDependencies ++= Seq(
+     "io.opentelemetry" % "opentelemetry-sdk"           % "1.62.0",
+     "io.opentelemetry" % "opentelemetry-exporter-otlp" % "1.62.0"
+   )
+   ```
+
+2. Configure the OTel SDK to export via OTLP gRPC to the Collector:
+
+   ```scala
+   import io.opentelemetry.sdk.OpenTelemetrySdk
+   import io.opentelemetry.sdk.metrics.SdkMeterProvider
+   import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader
+   import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter
+
+   val otlpExporter = OtlpGrpcMetricExporter.builder()
+     .setEndpoint("http://localhost:4317") // Collector gRPC endpoint
+     .build()
+
+   val meterProvider = SdkMeterProvider.builder()
+     .registerMetricReader(
+       PeriodicMetricReader.builder(otlpExporter)
+         .setInterval(java.time.Duration.ofSeconds(15))
+         .build()
+     )
+     .build()
+
+   val otel = OpenTelemetrySdk.builder()
+     .setMeterProvider(meterProvider)
+     .build()
+
+   val reporter = new OtelClusterReporter(otel, Some(sbd), Some(history))
+   ```
+
+3. Launch the OTel Collector observability stack from the project root:
+
+   ```bash
+   docker compose -f observability/docker-compose-otel.yml up -d
+   ```
+
+4. Open Grafana at [http://localhost:3000](http://localhost:3000) (default credentials: `admin` / `admin`).
+
+### Customization
+
+- **Scrape target (Option A)** — Edit `observability/prometheus/prometheus.yml` to change the target host/port.
+- **Collector config (Option B)** — Edit `observability/otel-collector/config.yml` to add processors, exporters, or additional receivers.
+- **Dashboard** — Modify or replace `observability/grafana/dashboards/cluster-pulse.json` to customize panels.
+- **Datasources** — Edit `observability/grafana/provisioning/datasources/prometheus.yml` to add additional datasources.
+
 ## Alternatives Comparison
 
 No existing open-source package provides Pekko cluster + shard + entity metrics with native OTel export. Here's how cluster-pulse compares:
