@@ -7,6 +7,8 @@
 
 A standalone, reusable Scala library for monitoring [Apache Pekko](https://pekko.apache.org/) cluster state with optional [OpenTelemetry](https://opentelemetry.io/) metrics export.
 
+cluster-pulse tracks and reports cluster state; it is a monitoring library, not a data-plane or query tool.
+
 ## Features
 
 - **`ClusterStatusTracker`** — A Pekko Typed actor that collects cluster membership, shard distribution, and entity counts across all nodes via the Receptionist pattern. Supports **multiple entity type keys**.
