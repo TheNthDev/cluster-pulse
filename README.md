@@ -28,7 +28,7 @@ A standalone, reusable Scala library for monitoring [Apache Pekko](https://pekko
 Add to your `build.sbt`:
 
 ```scala
-libraryDependencies += "dev.thenth.clusterpulse" %% "cluster-pulse" % "1.0.0"
+libraryDependencies += "dev.thenth" %% "cluster-pulse" % "1.0.0"
 ```
 
 ## OpenTelemetry SDK — Bring Your Own
