@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- README: OpenTelemetry Collector observability example (push via OTLP, `observability/docker-compose-otel.yml`) alongside the Prometheus scrape setup.
+
+### Changed
+- Added explicit `using` clauses for implicit parameters to resolve Scala 3.7 migration warnings (no behavior change).
+- README: replaced the alternatives comparison table with a "Related tools" section.
+
 ## [1.0.0] - 2026-05-15
 
 ### Added
@@ -33,7 +40,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Non-hosting nodes no longer penalize the health score (`shardBalanceScore` filters empty nodes).
-- Stale `/metrics` after stream failure resolved with `RestartSource.withBackoff`.
 
 [Unreleased]: https://github.com/TheNthDev/cluster-pulse/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/TheNthDev/cluster-pulse/releases/tag/v1.0.0

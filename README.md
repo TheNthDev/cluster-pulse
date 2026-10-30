@@ -7,6 +7,8 @@
 
 A standalone, reusable Scala library for monitoring [Apache Pekko](https://pekko.apache.org/) cluster state with optional [OpenTelemetry](https://opentelemetry.io/) metrics export.
 
+cluster-pulse tracks and reports cluster state; it is a monitoring library, not a data-plane or query tool.
+
 ## Features
 
 - **`ClusterStatusTracker`** — A Pekko Typed actor that collects cluster membership, shard distribution, and entity counts across all nodes via the Receptionist pattern. Supports **multiple entity type keys**.
@@ -28,7 +30,7 @@ A standalone, reusable Scala library for monitoring [Apache Pekko](https://pekko
 Add to your `build.sbt`:
 
 ```scala
-libraryDependencies += "dev.thenth.clusterpulse" %% "cluster-pulse" % "1.0.0"
+libraryDependencies += "dev.thenth" %% "cluster-pulse" % "1.0.0"
 ```
 
 ## OpenTelemetry SDK — Bring Your Own
@@ -158,6 +160,23 @@ val metricsRoute = PrometheusMetricsRoute(
 // Add to your Pekko HTTP routes:
 val allRoutes = yourRoutes ~ metricsRoute.route
 // GET /metrics returns Prometheus exposition format
+```
+
+`PrometheusMetricsRoute` only calls the `statusProvider` function on each scrape; it does not manage any stream. If you feed `statusProvider` from a stream (for example `pulse.statusStream()`) and that stream fails or completes, the last value is served indefinitely and `/metrics` goes stale. Restart the stream in your own code, for example with `RestartSource.withBackoff`:
+
+```scala
+import java.util.concurrent.atomic.AtomicReference
+import scala.concurrent.duration._
+import org.apache.pekko.stream.RestartSettings
+import org.apache.pekko.stream.scaladsl.{RestartSource, Sink}
+
+val latest = new AtomicReference[ClusterStatus](initialStatus)
+
+RestartSource
+  .withBackoff(RestartSettings(1.second, 30.seconds, 0.2)) { () => pulse.statusStream() }
+  .runWith(Sink.foreach(latest.set))
+
+val metricsRoute = PrometheusMetricsRoute(() => latest.get)
 ```
 
 ### 8. OpenTelemetry configuration
@@ -302,37 +321,15 @@ Your App  ──OTLP/gRPC──▶  OTel Collector  ◀──scrape──  Prome
 - **Dashboard** — Modify or replace `observability/grafana/dashboards/cluster-pulse.json` to customize panels.
 - **Datasources** — Edit `observability/grafana/provisioning/datasources/prometheus.yml` to add additional datasources.
 
-## Alternatives Comparison
+## Related tools
 
-No existing open-source package provides Pekko cluster + shard + entity metrics with native OTel export. Here's how cluster-pulse compares:
+cluster-pulse is not the only way to observe a Pekko cluster. These tools cover neighbouring ground and can be used alongside it:
 
-| Feature | cluster-pulse | Pekko Mgmt HTTP | Cinnamon | Kamon | OTel Agent | JMX Exporter | Micrometer |
-|---|---|---|---|---|---|---|---|
-| **Pekko support** | ✅ | ✅ | ❌ Akka only | ❌ Akka only | ✅ (JVM only) | ⚠️ Fragile | ✅ |
-| **Cluster membership** | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ | ✅ (manual) |
-| **Shard-level metrics** | ✅ | ❌ | ✅ | ⚠️ Basic | ❌ | ⚠️ | ✅ (manual) |
-| **Per-node entity count** | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ (manual) |
-| **Entity enumeration** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (manual) |
-| **Unreachable detection** | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ | ✅ (manual) |
-| **Native OTel export** | ✅ | ❌ | ✅ | ⚠️ | ✅ | ⚠️ Indirect | ✅ Via bridge |
-| **Health score** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Shard balance score** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Split-brain detection** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Event changelog** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Rolling history** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Distributed tracing** | ✅ | ❌ | ✅ | ⚠️ | ✅ | ❌ | ❌ |
-| **Prometheus endpoint** | ✅ | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ |
-| **Multi-type-key support** | ✅ | N/A | ✅ | ⚠️ | ❌ | ❌ | ✅ (manual) |
-| **Zero-code setup** | ❌ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ❌ |
-| **Open source** | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ |
-| **SSE/streaming API** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Cost** | Free | Free | Paid | Free | Free | Free | Free |
-
-### Key Takeaways
-
-1. **cluster-pulse fills a gap** — no existing open-source tool provides Pekko cluster + shard + entity OTel metrics.
-2. **OTel Java Agent is complementary** — use it for JVM/HTTP metrics alongside cluster-pulse for cluster topology.
-3. **The trade-off is maintenance** — cluster-pulse must track Pekko API changes, whereas agent-based solutions auto-adapt. For Pekko projects this is unavoidable since no auto-instrumentation exists for cluster internals.
+- [Pekko Management cluster HTTP](https://pekko.apache.org/docs/pekko-management/current/cluster-http-management.html) exposes HTTP routes for inspecting cluster members, domain events and shard regions, and for managing members when write routes are enabled; see also its [health checks](https://pekko.apache.org/docs/pekko-management/current/healthchecks.html).
+- The [OpenTelemetry Java agent](https://opentelemetry.io/docs/zero-code/java/agent/) attaches to a JVM application and instruments supported libraries at runtime without code changes.
+- The [Prometheus JMX exporter](https://github.com/prometheus/jmx_exporter) collects JMX MBean values so Prometheus can scrape them.
+- [Micrometer](https://docs.micrometer.io/micrometer/reference/) is a vendor-neutral instrumentation layer for JVM applications with support for backends such as Prometheus and OTLP.
+- [Akka Insights](https://doc.akka.io/libraries/akka-insights/current/home.html) (Cinnamon) is Akka's subscription-based observability tooling for Akka applications, including Akka Cluster Sharding; it targets Akka rather than Pekko.
 
 ## Code Coverage
 

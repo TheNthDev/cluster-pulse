@@ -34,7 +34,7 @@ sbt scalafmtAll
 Coverage thresholds are enforced in `build.sbt`:
 - **Statement coverage minimum:** 80%
 - **Branch coverage minimum:** 75%
-- Current actual coverage: ~88% statement / ~83% branch
+- Current actual coverage (2026-10-29 run, 128 tests): 86.36% statement / 80.28% branch
 
 Coverage reports are generated in `target/scala-3.8.1/scoverage-report/`.
 
