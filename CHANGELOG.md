@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- README: OpenTelemetry Collector observability example (push via OTLP, `observability/docker-compose-otel.yml`) alongside the Prometheus scrape setup.
+
+### Changed
+- Added explicit `using` clauses for implicit parameters to resolve Scala 3.7 migration warnings (no behavior change).
+- README: replaced the alternatives comparison table with a "Related tools" section.
+
 ## [1.0.0] - 2026-05-15
 
 ### Added
