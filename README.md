@@ -160,6 +160,23 @@ val allRoutes = yourRoutes ~ metricsRoute.route
 // GET /metrics returns Prometheus exposition format
 ```
 
+`PrometheusMetricsRoute` only calls the `statusProvider` function on each scrape; it does not manage any stream. If you feed `statusProvider` from a stream (for example `pulse.statusStream()`) and that stream fails or completes, the last value is served indefinitely and `/metrics` goes stale. Restart the stream in your own code, for example with `RestartSource.withBackoff`:
+
+```scala
+import java.util.concurrent.atomic.AtomicReference
+import scala.concurrent.duration._
+import org.apache.pekko.stream.RestartSettings
+import org.apache.pekko.stream.scaladsl.{RestartSource, Sink}
+
+val latest = new AtomicReference[ClusterStatus](initialStatus)
+
+RestartSource
+  .withBackoff(RestartSettings(1.second, 30.seconds, 0.2)) { () => pulse.statusStream() }
+  .runWith(Sink.foreach(latest.set))
+
+val metricsRoute = PrometheusMetricsRoute(() => latest.get)
+```
+
 ### 8. OpenTelemetry configuration
 
 Set standard `OTEL_*` environment variables:

@@ -33,7 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Non-hosting nodes no longer penalize the health score (`shardBalanceScore` filters empty nodes).
-- Stale `/metrics` after stream failure resolved with `RestartSource.withBackoff`.
 
 [Unreleased]: https://github.com/TheNthDev/cluster-pulse/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/TheNthDev/cluster-pulse/releases/tag/v1.0.0
